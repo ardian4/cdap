@@ -41,8 +41,13 @@ class HydratorPlusPlusStudioCtrl {
     };
     let artifact = getValidArtifact();
 
+<<<<<<< HEAD
     if (rConfig) {
       const modifiedConfig = angular.copy(rConfig);
+=======
+    if (rConfig.valid && rConfig.config) {
+      const modifiedConfig = angular.copy(rConfig.config);
+>>>>>>> 6bc79c1a725... intitialize default config if resolved config is invalid
 
       if (!modifiedConfig.artifact) {
         modifiedConfig.artifact = artifact;
