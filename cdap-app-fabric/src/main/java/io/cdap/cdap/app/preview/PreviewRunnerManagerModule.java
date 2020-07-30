@@ -32,6 +32,7 @@ import io.cdap.cdap.data2.dataset2.DatasetFramework;
 import io.cdap.cdap.data2.dataset2.DefaultDatasetDefinitionRegistryFactory;
 import io.cdap.cdap.internal.app.preview.DirectPreviewRequestFetcher;
 import io.cdap.cdap.internal.app.preview.PreviewRequestFetcher;
+import io.cdap.cdap.internal.app.preview.PreviewRequestPollerInfoProvider;
 import io.cdap.cdap.internal.app.preview.PreviewRunStopper;
 import io.cdap.cdap.internal.app.preview.PreviewRunnerService;
 import io.cdap.cdap.internal.app.preview.RemotePreviewRequestFetcher;
@@ -64,6 +65,8 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
         bind(DefaultPreviewRunnerManager.class).in(Scopes.SINGLETON);
         bind(PreviewRunStopper.class).to(DefaultPreviewRunnerManager.class);
         expose(PreviewRunStopper.class);
+        bind(PreviewRunnerSystemTerminator.class).to(DefaultPreviewRunnerManager.class);
+        expose(PreviewRunnerSystemTerminator.class);
         bind(PreviewRunnerManager.class).to(DefaultPreviewRunnerManager.class);
         expose(PreviewRunnerManager.class);
 
@@ -86,6 +89,10 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
     return new PrivateModule() {
       @Override
       protected void configure() {
+        bind(PreviewRunnerSystemTerminator.class).toInstance(() -> {
+          System.exit(0);
+        });
+        expose(PreviewRunnerSystemTerminator.class);
         bind(DatasetDefinitionRegistryFactory.class)
           .to(DefaultDatasetDefinitionRegistryFactory.class).in(Scopes.SINGLETON);
 
@@ -106,8 +113,10 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
       @Provides
       @Singleton
       @Exposed
-      PreviewRequestFetcher getPreviewRequestQueueFetcher(DiscoveryServiceClient discoveryServiceClient) {
-        return new RemotePreviewRequestFetcher(discoveryServiceClient, new byte[0]);
+      PreviewRequestFetcher getPreviewRequestQueueFetcher(
+        DiscoveryServiceClient discoveryServiceClient,
+        PreviewRequestPollerInfoProvider previewRequestPollerInfoProvider) {
+        return new RemotePreviewRequestFetcher(discoveryServiceClient, previewRequestPollerInfoProvider.get());
       }
     };
   }

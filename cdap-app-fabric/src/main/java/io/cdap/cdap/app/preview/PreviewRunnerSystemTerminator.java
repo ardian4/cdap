@@ -14,12 +14,14 @@
  * the License.
  */
 
-package io.cdap.cdap.k8s.common;
+package io.cdap.cdap.app.preview;
 
 /**
- * Enum representing Kubernetes resource types which can be run as twill applications on the Kubernetes cluster.
+ * Interface to terminate the preview runner system when no more preview runners are available.
  */
-public enum KubeResourceType {
-  DEPLOYMENT,
-  STATEFULSET
+public interface PreviewRunnerSystemTerminator {
+  /**
+   * Terminate the preview runner system.
+   */
+  void terminate();
 }
