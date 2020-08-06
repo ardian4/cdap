@@ -33,6 +33,7 @@ import io.cdap.cdap.app.preview.PreviewStatus;
 import io.cdap.cdap.app.runtime.ProgramController;
 import io.cdap.cdap.app.runtime.ProgramRuntimeService;
 import io.cdap.cdap.common.NamespaceAlreadyExistsException;
+import io.cdap.cdap.common.app.RunIds;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.logging.LoggingContextAccessor;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
@@ -138,8 +139,10 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
   public Future<PreviewRequest> startPreview(PreviewRequest previewRequest) throws Exception {
     ProgramId programId = previewRequest.getProgram();
 
+    long submitTimeMillis = RunIds.getTime(programId.getApplication(), TimeUnit.MILLISECONDS);
     // Set the status to INIT to prepare for preview run.
-    setStatus(programId, new PreviewStatus(PreviewStatus.Status.INIT, null, System.currentTimeMillis(), null));
+    setStatus(programId, new PreviewStatus(PreviewStatus.Status.INIT, submitTimeMillis, null,
+                                           System.currentTimeMillis(), null));
 
     AppRequest<?> request = previewRequest.getAppRequest();
 
@@ -166,8 +169,8 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
                                             artifactSummary, config, NOOP_PROGRAM_TERMINATOR, null,
                                             request.canUpdateSchedules());
     } catch (Exception e) {
-      setStatus(programId, new PreviewStatus(PreviewStatus.Status.DEPLOY_FAILED, new BasicThrowable(e),
-                                             null, null));
+      setStatus(programId, new PreviewStatus(PreviewStatus.Status.DEPLOY_FAILED, submitTimeMillis,
+                                             new BasicThrowable(e), null, null));
       throw e;
     }
 
@@ -187,7 +190,8 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
           case STARTING:
           case ALIVE:
           case STOPPING:
-            setStatus(programId, new PreviewStatus(PreviewStatus.Status.RUNNING, null, startTimeMillis, null));
+            setStatus(programId, new PreviewStatus(PreviewStatus.Status.RUNNING, submitTimeMillis, null,
+                                                   startTimeMillis, null));
             break;
           case COMPLETED:
             terminated(PreviewStatus.Status.COMPLETED, null);
@@ -223,7 +227,8 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
        * @param failureCause if the program was terminated due to error, this carries the failure cause
        */
       private void terminated(PreviewStatus.Status status, @Nullable Throwable failureCause) {
-        setStatus(programId, new PreviewStatus(status, failureCause == null ? null : new BasicThrowable(failureCause),
+        setStatus(programId, new PreviewStatus(status, submitTimeMillis,
+                                               failureCause == null ? null : new BasicThrowable(failureCause),
                                                startTimeMillis, System.currentTimeMillis()));
         if (failureCause == null) {
           resultFuture.complete(previewRequest);
