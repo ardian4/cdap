@@ -143,7 +143,7 @@ class HydratorPlusPlusTopPanelCtrl {
 
     $scope.$on('$destroy', () => {
       unsub();
-      this.stopPreview();
+      this.stopPreview(true);
       this.previewStore.dispatch(
         this.previewActions.togglePreviewMode(false)
       );
@@ -667,8 +667,8 @@ class HydratorPlusPlusTopPanelCtrl {
       });
   }
 
-  stopPreview() {
-    if (!this.currentPreviewId || !this.previewRunning) {
+  stopPreview(silentMode = false) {
+    if (!this.currentPreviewId || !this.previewRunning || this.loadingLabel === 'Stopping') {
       return;
     }
     let params = {
@@ -690,6 +690,9 @@ class HydratorPlusPlusTopPanelCtrl {
             this.dataSrc.stopPoll(this.pollId);
             this.pollId = null;
 
+            if (silentMode) {
+              return;
+            }
             let pipelinePreviewPlaceholder = 'The preview of the pipeline';
             const pipelineName = this.HydratorPlusPlusConfigStore.getName();
             if (pipelineName.length > 0) {
@@ -703,6 +706,9 @@ class HydratorPlusPlusTopPanelCtrl {
           (err) => {
             this.previewLoading = false;
             this.previewRunning = true;
+            if (silentMode) {
+              return;
+            }
             this.myAlertOnValium.show({type: 'danger', content: err.data});
         });
   }
