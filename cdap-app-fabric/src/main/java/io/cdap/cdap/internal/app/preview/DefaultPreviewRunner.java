@@ -34,6 +34,7 @@ import io.cdap.cdap.app.runtime.ProgramController;
 import io.cdap.cdap.app.runtime.ProgramRuntimeService;
 import io.cdap.cdap.common.NamespaceAlreadyExistsException;
 import io.cdap.cdap.common.app.RunIds;
+import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.logging.LoggingContextAccessor;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
@@ -62,6 +63,11 @@ import org.apache.twill.common.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -101,6 +107,8 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
   private final LevelDBTableService levelDBTableService;
   private final StructuredTableAdmin structuredTableAdmin;
   private final StructuredTableRegistry structuredTableRegistry;
+  private final PreviewRunWrapper previewRunWrapper;
+  private final Path programIdFilePath;
 
   @Inject
   DefaultPreviewRunner(MessagingService messagingService,
@@ -117,7 +125,8 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
                        ProgramNotificationSubscriberService programNotificationSubscriberService,
                        LevelDBTableService levelDBTableService,
                        StructuredTableAdmin structuredTableAdmin,
-                       StructuredTableRegistry structuredTableRegistry) {
+                       StructuredTableRegistry structuredTableRegistry, PreviewRunWrapper previewRunWrapper,
+                       CConfiguration cConf) {
     this.messagingService = messagingService;
     this.dsOpExecService = dsOpExecService;
     this.datasetService = datasetService;
@@ -133,12 +142,14 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
     this.levelDBTableService = levelDBTableService;
     this.structuredTableAdmin = structuredTableAdmin;
     this.structuredTableRegistry = structuredTableRegistry;
+    this.previewRunWrapper = previewRunWrapper;
+    programIdFilePath = Paths.get(cConf.get(Constants.CFG_LOCAL_DATA_DIR), "program.id").toAbsolutePath();
   }
 
   @Override
   public Future<PreviewRequest> startPreview(PreviewRequest previewRequest) throws Exception {
     ProgramId programId = previewRequest.getProgram();
-
+    previewRunWrapper.init(programId);
     long submitTimeMillis = RunIds.getTime(programId.getApplication(), TimeUnit.MILLISECONDS);
     // Set the status to INIT to prepare for preview run.
     setStatus(programId, new PreviewStatus(PreviewStatus.Status.INIT, submitTimeMillis, null,
@@ -171,6 +182,7 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
     } catch (Exception e) {
       setStatus(programId, new PreviewStatus(PreviewStatus.Status.DEPLOY_FAILED, submitTimeMillis,
                                              new BasicThrowable(e), null, null));
+      previewRunWrapper.destroy();
       throw e;
     }
 
@@ -235,6 +247,7 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
         } else {
           resultFuture.completeExceptionally(failureCause);
         }
+        previewRunWrapper.destroy();
       }
     }, Threads.SAME_THREAD_EXECUTOR);
 
@@ -304,6 +317,25 @@ public class DefaultPreviewRunner extends AbstractIdleService implements Preview
       metricsCollectionService.start(),
       programNotificationSubscriberService.start()
     ).get();
+
+    if (Files.exists(programIdFilePath)) {
+      try (Reader reader = Files.newBufferedReader(programIdFilePath, StandardCharsets.UTF_8)) {
+        ProgramId programId = GSON.fromJson(reader, ProgramId.class);
+        long submitTimeMillis = RunIds.getTime(programId.getApplication(), TimeUnit.MILLISECONDS);
+        PreviewStatus status = new PreviewStatus(
+          PreviewStatus.Status.RUN_FAILED, submitTimeMillis,
+          new BasicThrowable(new Exception("Preview runner container killed possibly because of out of memory. " +
+                                             "Please try running preview again.")),
+          null, null);
+        setStatus(programId, status);
+      }
+      try {
+        Files.delete(programIdFilePath);
+      } catch (Exception e) {
+        LOG.error("Failed to delete", e);
+        throw e;
+      }
+    }
   }
 
   @Override

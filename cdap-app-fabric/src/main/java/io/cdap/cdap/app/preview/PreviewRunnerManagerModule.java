@@ -34,8 +34,10 @@ import io.cdap.cdap.internal.app.preview.DirectPreviewRequestFetcher;
 import io.cdap.cdap.internal.app.preview.PreviewRequestFetcher;
 import io.cdap.cdap.internal.app.preview.PreviewRequestPollerInfoProvider;
 import io.cdap.cdap.internal.app.preview.PreviewRunStopper;
+import io.cdap.cdap.internal.app.preview.PreviewRunWrapper;
 import io.cdap.cdap.internal.app.preview.PreviewRunnerService;
 import io.cdap.cdap.internal.app.preview.RemotePreviewRequestFetcher;
+import io.cdap.cdap.proto.id.ProgramId;
 import org.apache.twill.discovery.DiscoveryServiceClient;
 
 /**
@@ -61,6 +63,18 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
           .annotatedWith(Names.named(DataSetsModules.BASE_DATASET_FRAMEWORK))
           .to(RemoteDatasetFramework.class);
         bind(PreviewRunnerModule.class).to(DefaultPreviewRunnerModule.class);
+
+        bind(PreviewRunWrapper.class).toInstance(new PreviewRunWrapper() {
+          @Override
+          public void init(ProgramId programId) {
+            // no-op
+          }
+
+          @Override
+          public void destroy() {
+            // no-op
+          }
+        });
 
         bind(DefaultPreviewRunnerManager.class).in(Scopes.SINGLETON);
         bind(PreviewRunStopper.class).to(DefaultPreviewRunnerManager.class);
@@ -100,6 +114,8 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
           .annotatedWith(Names.named(DataSetsModules.BASE_DATASET_FRAMEWORK))
           .to(RemoteDatasetFramework.class);
         bind(PreviewRunnerModule.class).to(DefaultPreviewRunnerModule.class);
+
+        bind(PreviewRunWrapper.class).to(DistributedPreviewRunWrapper.class);
 
         bind(DefaultPreviewRunnerManager.class).in(Scopes.SINGLETON);
         bind(PreviewRunnerManager.class).to(DefaultPreviewRunnerManager.class);

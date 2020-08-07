@@ -28,7 +28,6 @@ import io.cdap.cdap.app.deploy.Manager;
 import io.cdap.cdap.app.deploy.ManagerFactory;
 import io.cdap.cdap.app.guice.AppFabricServiceRuntimeModule;
 import io.cdap.cdap.app.store.Store;
-import io.cdap.cdap.app.store.preview.PreviewStore;
 import io.cdap.cdap.common.namespace.NamespaceAdmin;
 import io.cdap.cdap.common.namespace.NamespaceQueryAdmin;
 import io.cdap.cdap.config.PreferencesService;
@@ -45,6 +44,7 @@ import io.cdap.cdap.internal.app.namespace.StorageProviderNamespaceAdmin;
 import io.cdap.cdap.internal.app.preview.DefaultDataTracerFactory;
 import io.cdap.cdap.internal.app.preview.DefaultPreviewRunner;
 import io.cdap.cdap.internal.app.preview.MessagingPreviewDataPublisher;
+import io.cdap.cdap.internal.app.preview.PreviewRunWrapper;
 import io.cdap.cdap.internal.app.runtime.ProgramRuntimeProviderLoader;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactRepository;
 import io.cdap.cdap.internal.app.runtime.artifact.ArtifactStore;
@@ -52,7 +52,6 @@ import io.cdap.cdap.internal.app.runtime.artifact.DefaultArtifactRepository;
 import io.cdap.cdap.internal.app.runtime.workflow.BasicWorkflowStateWriter;
 import io.cdap.cdap.internal.app.runtime.workflow.WorkflowStateWriter;
 import io.cdap.cdap.internal.app.store.DefaultStore;
-import io.cdap.cdap.internal.app.store.preview.DefaultPreviewStore;
 import io.cdap.cdap.internal.pipeline.SynchronousPipelineFactory;
 import io.cdap.cdap.messaging.MessagingService;
 import io.cdap.cdap.metadata.DefaultMetadataAdmin;
@@ -83,6 +82,7 @@ public class DefaultPreviewRunnerModule extends PrivateModule implements Preview
   private final PreferencesService preferencesService;
   private final ProgramRuntimeProviderLoader programRuntimeProviderLoader;
   private final MessagingService messagingService;
+  private final PreviewRunWrapper previewRunWrapper;
 
   @VisibleForTesting
   @Inject
@@ -91,7 +91,7 @@ public class DefaultPreviewRunnerModule extends PrivateModule implements Preview
                                     AuthorizationEnforcer authorizationEnforcer,
                                     PrivilegesManager privilegesManager, PreferencesService preferencesService,
                                     ProgramRuntimeProviderLoader programRuntimeProviderLoader,
-                                    MessagingService messagingService) {
+                                    MessagingService messagingService, PreviewRunWrapper previewRunWrapper) {
     this.artifactRepository = artifactRepository;
     this.artifactStore = artifactStore;
     this.authorizerInstantiator = authorizerInstantiator;
@@ -100,6 +100,7 @@ public class DefaultPreviewRunnerModule extends PrivateModule implements Preview
     this.preferencesService = preferencesService;
     this.programRuntimeProviderLoader = programRuntimeProviderLoader;
     this.messagingService = messagingService;
+    this.previewRunWrapper = previewRunWrapper;
   }
 
   @Override
@@ -178,6 +179,8 @@ public class DefaultPreviewRunnerModule extends PrivateModule implements Preview
     expose(OwnerStore.class);
     bind(OwnerAdmin.class).to(DefaultOwnerAdmin.class);
     expose(OwnerAdmin.class);
+
+    bind(PreviewRunWrapper.class).toInstance(previewRunWrapper);
   }
 
   /**
