@@ -28,7 +28,6 @@ import io.cdap.cdap.app.guice.ProgramRunnerRuntimeModule;
 import io.cdap.cdap.app.guice.UnsupportedExploreClient;
 import io.cdap.cdap.app.preview.PreviewHttpModule;
 import io.cdap.cdap.app.preview.PreviewHttpServer;
-import io.cdap.cdap.app.preview.PreviewRunnerManagerModule;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.guice.DFSLocationModule;
 import io.cdap.cdap.common.logging.LoggingContext;
@@ -37,7 +36,6 @@ import io.cdap.cdap.data.runtime.DataSetServiceModules;
 import io.cdap.cdap.data.runtime.DataSetsModules;
 import io.cdap.cdap.data2.audit.AuditModule;
 import io.cdap.cdap.explore.client.ExploreClient;
-import io.cdap.cdap.internal.app.preview.PreviewRequestPollerInfoProvider;
 import io.cdap.cdap.internal.app.preview.PreviewRunStopper;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
@@ -48,6 +46,7 @@ import io.cdap.cdap.metrics.guice.MetricsStoreModule;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.security.authorization.AuthorizationEnforcementModule;
 import io.cdap.cdap.security.guice.SecureStoreClientModule;
+import org.apache.twill.api.Configs;
 import org.apache.twill.api.ResourceSpecification;
 import org.apache.twill.api.TwillRunner;
 import org.apache.twill.api.TwillRunnerService;
@@ -64,6 +63,7 @@ import javax.annotation.Nullable;
 public class PreviewServiceMain extends AbstractServiceMain<EnvironmentOptions> {
   private static final String PREVIEW_RUNNER_CPU_MULTIPLIER = "preview.runner.container.cpu.multiplier";
   private static final String PREVIEW_RUNNER_MEMORY_MULTIPLIER = "preview.runner.container.memory.multiplier";
+  private static final String PREVIEW_RUNNER_HEAP_RESERVED_RATIO = "preview.runner.container.java.heap.memory.ratio";
 
   // Following constants are same as defined in AbstractKubeTwillPreparer
   private static final String CPU_MULTIPLIER = "master.environment.k8s.container.cpu.multiplier";
@@ -127,6 +127,9 @@ public class PreviewServiceMain extends AbstractServiceMain<EnvironmentOptions> 
     }
     if (configurations.containsKey(PREVIEW_RUNNER_MEMORY_MULTIPLIER)) {
       configurations.put(MEMORY_MULTIPLIER, configurations.get(PREVIEW_RUNNER_MEMORY_MULTIPLIER));
+    }
+    if (configurations.containsKey(PREVIEW_RUNNER_HEAP_RESERVED_RATIO)) {
+      configurations.put(Configs.Keys.HEAP_RESERVED_MIN_RATIO, configurations.get(PREVIEW_RUNNER_HEAP_RESERVED_RATIO));
     }
     ResourceSpecification specification = ResourceSpecification.Builder.with()
       .setVirtualCores(1)

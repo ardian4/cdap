@@ -28,7 +28,6 @@ import io.kubernetes.client.models.V1EnvVar;
 import io.kubernetes.client.models.V1LabelSelector;
 import io.kubernetes.client.models.V1ObjectFieldSelector;
 import io.kubernetes.client.models.V1ObjectMeta;
-import io.kubernetes.client.models.V1ObjectMetaBuilder;
 import io.kubernetes.client.models.V1OwnerReference;
 import io.kubernetes.client.models.V1PersistentVolumeClaim;
 import io.kubernetes.client.models.V1PersistentVolumeClaimSpec;
@@ -61,10 +60,12 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
   private static final Logger LOG = LoggerFactory.getLogger(DeploymentTwillPreparer.class);
   private static final String PVC_NAME = "preview-runner-data";
   private static final String CONTAINER_NAME = "cdap-preview-container";
-  private static final String PREVIEW_RUNNERS_COUNT = "preview.runners.count";
-  private static final String PREVIEW_RUNNER_TERMINATION_GRACE_PERIOD_SECONDS
-    = "preview.runner.termination.grace.period.seconds";
-  private static final String PREVIEW_RUNNER_PRIORITY_CLASS_NAME = "preview.runner.priority.class.name";
+  private static final String PREVIEW_RUNNER_CONTAINER_COUNT = "preview.runner.container.count";
+  private static final String PREVIEW_RUNNER_CONTAINER_TERMINATION_GRACE_PERIOD_SECONDS
+    = "preview.runner.container.termination.grace.period.seconds";
+  private static final String PREVIEW_RUNNER_CONTAINER_PRIORITY_CLASS_NAME
+    = "preview.runner.container.priority.class.name";
+  private static final String PREVIEW_RUNNER_CONTAINER_DISK_SIZE_GB = "preview.runner.container.disk.size.gb";
 
   private final PodInfo podInfo;
   private final Map<String, String> cConf;
@@ -115,7 +116,7 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
     V1LabelSelector labelSelector = new V1LabelSelector();
     labelSelector.matchLabels(resourceMeta.getLabels());
     statefulSetSpec.setSelector(labelSelector);
-    statefulSetSpec.setReplicas(Integer.parseInt(cConf.getOrDefault(PREVIEW_RUNNERS_COUNT, "1")));
+    statefulSetSpec.setReplicas(Integer.parseInt(cConf.getOrDefault(PREVIEW_RUNNER_CONTAINER_COUNT, "1")));
 
     // We don't need to launch pods one after other since we do not have primary-secondary
     // configurations for the preview runner pods
@@ -127,7 +128,7 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
     V1PodSpec podSpec = new V1PodSpec();
 
     podSpec.setTerminationGracePeriodSeconds(
-      Long.parseLong(cConf.getOrDefault(PREVIEW_RUNNER_TERMINATION_GRACE_PERIOD_SECONDS, "5")));
+      Long.parseLong(cConf.getOrDefault(PREVIEW_RUNNER_CONTAINER_TERMINATION_GRACE_PERIOD_SECONDS, "30")));
 
     // Define volumes in the pod
     V1Volume podInfoVolume = getPodInfoVolume();
@@ -139,7 +140,6 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
     V1Container container = new V1Container();
     container.setName(CONTAINER_NAME);
     container.setImage(podInfo.getContainerImage());
-    container.setImagePullPolicy("Always");
 
     container.addArgsItem("io.cdap.cdap.internal.app.runtime.k8s.PreviewRunnerMain");
     container.addArgsItem("--env=k8s");
@@ -164,7 +164,7 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
 
     // For preview runner pods we can create another priority class with lower priority than
     // the sts-priority
-    podSpec.setPriorityClassName(cConf.getOrDefault(PREVIEW_RUNNER_PRIORITY_CLASS_NAME, "priority-low"));
+    podSpec.setPriorityClassName(cConf.getOrDefault(PREVIEW_RUNNER_CONTAINER_PRIORITY_CLASS_NAME, "priority-low"));
 
     podTemplateSpec.setSpec(podSpec);
     statefulSetSpec.setTemplate(podTemplateSpec);
@@ -185,8 +185,8 @@ public class StatefulSetTwillPreparer extends AbstractKubeTwillPreparer {
     V1PersistentVolumeClaimSpec spec = new V1PersistentVolumeClaimSpec();
     spec.setAccessModes(Collections.singletonList("ReadWriteOnce"));
     Map<String, Quantity> requests = new HashMap<>();
-    // TODO: Hardcoded for now
-    requests.put("storage", Quantity.fromString("10Gi"));
+    String diskSize = String.format("%sGi", cConf.getOrDefault(PREVIEW_RUNNER_CONTAINER_DISK_SIZE_GB, "10"));
+    requests.put("storage", Quantity.fromString(diskSize));
     V1ResourceRequirements resourceRequirements = new V1ResourceRequirements();
     resourceRequirements.setRequests(requests);
     spec.setResources(resourceRequirements);

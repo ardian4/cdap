@@ -65,8 +65,6 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
         bind(DefaultPreviewRunnerManager.class).in(Scopes.SINGLETON);
         bind(PreviewRunStopper.class).to(DefaultPreviewRunnerManager.class);
         expose(PreviewRunStopper.class);
-        bind(PreviewRunnerSystemTerminator.class).to(DefaultPreviewRunnerManager.class);
-        expose(PreviewRunnerSystemTerminator.class);
         bind(PreviewRunnerManager.class).to(DefaultPreviewRunnerManager.class);
         expose(PreviewRunnerManager.class);
 
@@ -89,10 +87,6 @@ public class PreviewRunnerManagerModule extends RuntimeModule {
     return new PrivateModule() {
       @Override
       protected void configure() {
-        bind(PreviewRunnerSystemTerminator.class).toInstance(() -> {
-          System.exit(0);
-        });
-        expose(PreviewRunnerSystemTerminator.class);
         bind(DatasetDefinitionRegistryFactory.class)
           .to(DefaultDatasetDefinitionRegistryFactory.class).in(Scopes.SINGLETON);
 

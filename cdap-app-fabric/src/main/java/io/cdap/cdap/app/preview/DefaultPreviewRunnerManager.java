@@ -89,7 +89,6 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
   private final LevelDBTableService previewLevelDBTableService;
   private final PreviewRunnerServiceFactory previewRunnerServiceFactory;
   private PreviewRunner runner;
-  private final PreviewRunnerSystemTerminator previewRunnerSystemTerminator;
 
   @Inject
   DefaultPreviewRunnerManager(
@@ -100,8 +99,7 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
     @Named(DataSetsModules.BASE_DATASET_FRAMEWORK) DatasetFramework datasetFramework,
     TransactionSystemClient transactionSystemClient,
     @Named(PreviewConfigModule.PREVIEW_LEVEL_DB) LevelDBTableService previewLevelDBTableService,
-    PreviewRunnerModule previewRunnerModule, PreviewRunnerServiceFactory previewRunnerServiceFactory,
-    PreviewRunnerSystemTerminator previewRunnerSystemTerminator) {
+    PreviewRunnerModule previewRunnerModule, PreviewRunnerServiceFactory previewRunnerServiceFactory) {
     this.previewCConf = previewCConf;
     this.previewHConf = previewHConf;
     this.previewSConf = previewSConf;
@@ -114,7 +112,6 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
     this.previewRunnerModule = previewRunnerModule;
     this.previewLevelDBTableService = previewLevelDBTableService;
     this.previewRunnerServiceFactory = previewRunnerServiceFactory;
-    this.previewRunnerSystemTerminator = previewRunnerSystemTerminator;
   }
 
   @Override
@@ -136,8 +133,7 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
           previewRunnerServices.remove(pollerService);
           if (previewRunnerServices.isEmpty()) {
             try {
-              LOG.info("Shutting down");
-              previewRunnerSystemTerminator.terminate();
+              stop();
             } catch (Exception e) {
               // should not happen
               LOG.error("Failed to shutdown the preview runner manager service.", e);
@@ -236,10 +232,5 @@ public class DefaultPreviewRunnerManager extends AbstractIdleService implements 
         }
       }
     );
-  }
-
-  @Override
-  public void terminate() {
-    this.stop();
   }
 }

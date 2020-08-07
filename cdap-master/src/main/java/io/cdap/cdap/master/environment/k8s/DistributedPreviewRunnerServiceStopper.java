@@ -61,8 +61,7 @@ public class DistributedPreviewRunnerServiceStopper implements PreviewRunStopper
     }
     String pInfo = Bytes.toString(pollerInfo);
     PreviewRequestPollerInfo previewRequestPollerInfo = GSON.fromJson(pInfo, PreviewRequestPollerInfo.class);
-    Iterator<TwillController> controllers
-      = twillRunnerService.lookup("preview-runner").iterator();
+    Iterator<TwillController> controllers = twillRunnerService.lookup("preview-runner").iterator();
     if (!controllers.hasNext()) {
       throw new IllegalStateException("Preview runners cannot be stopped. Please try again.");
     }

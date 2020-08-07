@@ -320,6 +320,7 @@ class KubeTwillController implements TwillController {
     }
 
     int instanceId = instanceIds.iterator().next();
+    // pod uid is passed as "runnable" parameter to the method.
     V1DeleteOptions deleteOptions = new V1DeleteOptions().preconditions(new V1Preconditions().uid(runnable));
 
     String podName = String.format("%s-%d", meta.getName(), instanceId);

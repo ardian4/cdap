@@ -150,11 +150,6 @@ public class KubeMasterEnvironment implements MasterEnvironment {
     return () -> twillRunner;
   }
 
-  @Override
-  public Optional<MasterEnvironmentTask> getTask() {
-    return Optional.empty();
-  }
-
   private PodInfo getPodInfo(Map<String, String> conf) throws IOException, ApiException {
     String namespace = conf.getOrDefault(NAMESPACE_KEY, DEFAULT_NAMESPACE);
 

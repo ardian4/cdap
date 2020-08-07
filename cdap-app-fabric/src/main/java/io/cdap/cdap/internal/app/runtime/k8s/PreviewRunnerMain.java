@@ -47,6 +47,7 @@ import io.cdap.cdap.metrics.guice.MetricsStoreModule;
 import io.cdap.cdap.proto.id.NamespaceId;
 import io.cdap.cdap.security.authorization.AuthorizationEnforcementModule;
 import io.cdap.cdap.security.guice.SecureStoreClientModule;
+import org.apache.twill.internal.ServiceListenerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,7 +106,27 @@ public class PreviewRunnerMain extends AbstractServiceMain<PreviewRunnerOptions>
   protected void addServices(Injector injector, List<? super Service> services,
                              List<? super AutoCloseable> closeableResources, MasterEnvironment masterEnv,
                              MasterEnvironmentContext masterEnvContext, PreviewRunnerOptions options) {
-    services.add(((Service) injector.getInstance(PreviewRunnerManager.class)));
+    Service previewRunnerManager = (Service) injector.getInstance(PreviewRunnerManager.class);
+    previewRunnerManager.addListener(new ServiceListenerAdapter() {
+      @Override
+      public void terminated(Service.State from) {
+        terminate();
+      }
+
+      @Override
+      public void failed(Service.State from, Throwable failure) {
+        terminate();
+      }
+
+      private void terminate() {
+        System.exit(0);
+      }
+    }, command -> {
+      Thread thread = new Thread(command, "PreviewRunnerMainTerminator");
+      thread.setDaemon(true);
+      thread.start();
+    });
+    services.add(previewRunnerManager);
   }
 
   @Nullable
