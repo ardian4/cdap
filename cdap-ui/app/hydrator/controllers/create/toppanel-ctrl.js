@@ -668,7 +668,7 @@ class HydratorPlusPlusTopPanelCtrl {
   }
 
   stopPreview() {
-    if (!this.currentPreviewId) {
+    if (!this.currentPreviewId || !this.previewRunning) {
       return;
     }
     let params = {
