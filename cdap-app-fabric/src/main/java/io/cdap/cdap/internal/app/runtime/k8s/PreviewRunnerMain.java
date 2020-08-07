@@ -145,7 +145,7 @@ public class PreviewRunnerMain extends AbstractServiceMain<PreviewRunnerOptions>
 
   private static String readFile(String fileName) {
     try {
-      return new String(Files.readAllBytes(Paths.get(fileName)));
+      return Bytes.toString(Files.readAllBytes(Paths.get(fileName)));
     } catch (IOException e) {
       throw new IllegalArgumentException(String.format("Unable to read file %s", fileName), e);
     }
