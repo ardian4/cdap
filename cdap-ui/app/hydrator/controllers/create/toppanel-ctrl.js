@@ -667,6 +667,15 @@ class HydratorPlusPlusTopPanelCtrl {
       });
   }
 
+  resetBtnsAndStopPoll() {
+    this.stopTimer();
+    this.updateTimerLabelAndTitle();
+    this.previewLoading = false;
+    this.previewRunning = false;
+    this.dataSrc.stopPoll(this.pollId);
+    this.pollId = null;
+  }
+
   stopPreview() {
     if (!this.currentPreviewId) {
       return;
@@ -678,29 +687,31 @@ class HydratorPlusPlusTopPanelCtrl {
     };
     this.previewLoading = true;
     this.loadingLabel = 'Stopping';
+    let pipelinePreviewPlaceholder = 'The preview of the pipeline';
+    const pipelineName = this.HydratorPlusPlusConfigStore.getName();
+    if (pipelineName.length > 0) {
+      pipelinePreviewPlaceholder += ` "${pipelineName}"`;
+    }
     this.myPipelineApi
         .stopPreview(params, {})
         .$promise
         .then(
           () => {
-            this.stopTimer();
-            this.updateTimerLabelAndTitle();
-            this.previewLoading = false;
-            this.previewRunning = false;
-            this.dataSrc.stopPoll(this.pollId);
-            this.pollId = null;
-
-            let pipelinePreviewPlaceholder = 'The preview of the pipeline';
-            const pipelineName = this.HydratorPlusPlusConfigStore.getName();
-            if (pipelineName.length > 0) {
-              pipelinePreviewPlaceholder += ` "${pipelineName}"`;
-            }
+            this.resetBtnsAndStopPoll();
             this.myAlertOnValium.show({
               type: 'success',
               content: `${pipelinePreviewPlaceholder} was stopped.`
             });
           },
           (err) => {
+            // If error is due to run already having completed, reset UI as if stop succeeded
+            if (err.statusCode === 400) {
+              this.resetBtnsAndStopPoll();
+              this.myAlertOnValium.show({
+                type: 'success',
+                content: `${pipelinePreviewPlaceholder} was stopped.`
+              });
+            }
             this.previewLoading = false;
             this.previewRunning = true;
             this.myAlertOnValium.show({type: 'danger', content: err.data});
